@@ -1,70 +1,11 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080d18">
-  <meta name="description" content="Vanta Central — the customer and creative workspace for Vanta Designs.">
-  <title>Vanta Central | Vanta Designs</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#" aria-label="Vanta Central home">
-        <span class="brand-mark">V</span><span><b>VANTA</b><small>CENTRAL</small></span>
-      </a>
-      <div class="workspace-label">WORKSPACE</div>
-      <nav class="nav">
-        <a class="nav-item active" href="#overview"><span class="nav-icon">◫</span> Overview</a>
-        <a class="nav-item" href="#orders"><span class="nav-icon">▤</span> My orders <span class="nav-count">0</span></a>
-        <a class="nav-item" href="#history"><span class="nav-icon">◷</span> Order history</a>
-        <a class="nav-item" href="#notifications"><span class="nav-icon">♧</span> Notifications</a>
-      </nav>
-      <div class="workspace-label staff-label">TEAM WORKSPACE</div>
-      <nav class="nav">
-        <a class="nav-item locked" href="#designer"><span class="nav-icon">✳</span> Designer workspace <span class="lock">⌑</span></a>
-        <a class="nav-item locked" href="#sales"><span class="nav-icon">↗</span> Sales & orders <span class="lock">⌑</span></a>
-        <a class="nav-item locked" href="#operations"><span class="nav-icon">⚙</span> Operations <span class="lock">⌑</span></a>
-        <a class="nav-item locked" href="#admin"><span class="nav-icon">⌘</span> Administration <span class="lock">⌑</span></a>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="secure-note"><span class="secure-dot"></span><div><b>Secure workspace</b><small>Access controls enabled</small></div></div>
-        <div class="profile-placeholder"><div class="avatar">?</div><div><b>Guest session</b><small>Not signed in</small></div><span class="more">···</span></div>
-      </div>
-    </aside>
-    <main class="main">
-      <header class="topbar">
-        <button class="mobile-menu" id="menuBtn" aria-label="Open navigation">☰</button>
-        <div class="breadcrumb">VANTA DESIGNS <span>/</span> <b>OVERVIEW</b></div>
-        <div class="top-actions"><span class="status-pill"><i></i> SYSTEM ONLINE</span><button class="icon-button" aria-label="Notifications">♧</button><button class="signin-button" id="signinBtn">Sign in with Discord <span>↗</span></button></div>
-      </header>
-      <section class="content" id="overview">
-        <div class="eyebrow"><span class="eyebrow-line"></span> YOUR CREATIVE HQ</div>
-        <div class="hero-row"><div><h1>Everything in<br><span>one place.</span></h1><p class="hero-copy">Track your orders, follow progress and keep your Vanta projects moving.</p></div><div class="hero-art"><div class="art-ring"></div><div class="art-v">V</div><div class="art-caption">DESIGN<br>WITHOUT LIMITS</div></div></div>
-        <div class="setup-alert"><div class="alert-icon">!</div><div><b>Connect your Discord account</b><p>Sign in securely with Discord. Vanta Central checks your membership and team roles before granting access.</p></div><span class="alert-tag">SETUP REQUIRED</span></div>
-        <div class="section-heading"><div><span class="section-kicker">YOUR ACCOUNT</span><h2>Workspace overview</h2></div><span class="muted-label">LIVE ACCOUNT DATA REQUIRES SIGN-IN</span></div>
-        <div class="stats-grid">
-          <article class="stat-card"><div class="stat-top"><span>ACTIVE ORDERS</span><span class="stat-symbol">▤</span></div><strong>—</strong><small>Connect your account to view</small></article>
-          <article class="stat-card"><div class="stat-top"><span>IN PROGRESS</span><span class="stat-symbol">◌</span></div><strong>—</strong><small>Your current design queue</small></article>
-          <article class="stat-card"><div class="stat-top"><span>COMPLETED</span><span class="stat-symbol">✓</span></div><strong>—</strong><small>Your delivered projects</small></article>
-          <article class="stat-card"><div class="stat-top"><span>ACCOUNT STATUS</span><span class="stat-symbol">◎</span></div><strong class="account-state">GUEST</strong><small>Discord membership not verified</small></article>
-        </div>
-        <div class="lower-grid">
-          <section class="panel orders-panel" id="orders"><div class="panel-heading"><div><span class="section-kicker">PROJECT TRACKER</span><h2>Recent orders</h2></div><a href="#history" class="text-link">View history ↗</a></div><div class="empty-state"><div class="empty-icon">▤</div><b>Your projects will appear here</b><p>Sign in with your Vanta Discord account to securely view your orders and their progress.</p><button class="outline-button" id="emptySignin">Connect Discord account <span>↗</span></button></div></section>
-          <section class="panel activity-panel" id="notifications"><div class="panel-heading"><div><span class="section-kicker">LATEST UPDATES</span><h2>Activity</h2></div><span class="live-dot"></span></div><div class="activity-empty"><div class="activity-line"></div><div class="activity-item"><span class="activity-node"></span><div><b>You're all caught up</b><p>Order updates and delivery notifications will show here.</p><small>AWAITING ACCOUNT CONNECTION</small></div></div></div></section>
-        </div>
-        <section class="bottom-banner"><div><span class="section-kicker">BUILT FOR THE CREATIVE PROCESS</span><h2>From first brief to final delivery.</h2><p>One place for customers, designers and the Vanta team.</p></div><div class="banner-mark">V<span>.</span></div></section>
-        <footer><span>© 2026 VANTA DESIGNS</span><span>VANTA CENTRAL <i>•</i> CUSTOMER & TEAM PORTAL</span><a href="README.md">SETUP & SECURITY</a></footer>
-      </section>
-    </main>
-  </div>
-  <div class="toast" id="toast" role="status"></div>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070b13"><meta name="description" content="Create your Vanta Designs account or sign in securely with Discord."><title>Vanta Designs | Your creative workspace</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"></head>
+<body><div class="grain"></div><div class="page-glow glow-a"></div><div class="page-glow glow-b"></div>
+<header class="topbar"><a class="brand" href="./" aria-label="Vanta Designs home"><span class="brand-symbol"><span></span><span></span><span></span></span><span class="brand-name">VANTA<span>DESIGNS</span></span></a><div class="top-right"><span class="top-caption">THE CREATIVE WORKSPACE</span><span class="top-divider"></span><span class="secure-label"><i></i> SECURE ACCESS</span></div></header>
+<main class="auth-layout"><section class="intro"><div class="eyebrow"><span></span> BUILT FOR THE NEXT LEVEL</div><h1>Your work.<br><em>Your world.</em></h1><p class="intro-copy">A home for every Vanta project. Create your account to get started, or sign in to pick up where you left off.</p>
+<div class="visual-stage" aria-hidden="true"><div class="stage-grid"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><div class="monogram">V<span>.</span></div><div class="stage-label label-top">VANTA / CENTRAL</div><div class="stage-label label-bottom">DESIGN IN MOTION <b>01 — 026</b></div><div class="stage-cross cross-one">+</div><div class="stage-cross cross-two">+</div></div><div class="intro-foot"><span>INDEPENDENT DESIGN STUDIO</span><span>EST. 2026</span></div></section>
+<section class="auth-column" aria-labelledby="auth-title"><div class="auth-card"><div class="card-topline"><span>VANTA CENTRAL</span><span class="card-index">01 / ACCESS</span></div><div class="card-heading"><div class="mini-mark">V</div><div class="card-kicker">YOUR ACCOUNT STARTS HERE</div><h2 id="auth-title">Get started.</h2><p class="card-description">Use your Discord account to create your Vanta profile or sign back in.</p></div>
+<div class="auth-choice"><div class="choice-label"><span>NEW TO VANTA?</span><span class="choice-line"></span></div><button class="primary-auth" id="createBtn" type="button"><span>Create a Vanta account</span><span class="button-arrow">↗</span></button><p class="button-hint">Your Vanta account is created after Discord verification.</p></div>
+<div class="or-divider"><span></span><b>ALREADY HAVE AN ACCOUNT?</b><span></span></div><button class="discord-auth" id="signinBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.7 5.2A18.7 18.7 0 0 0 15.1 3.8l-.6 1.2a17.2 17.2 0 0 0-5 0l-.6-1.2a18.7 18.7 0 0 0-4.6 1.4C1.4 9.5.6 13.7 1 17.8a18.8 18.8 0 0 0 5.7 2.9l1.2-2a12 12 0 0 1-1.9-.9l.5-.4a13.4 13.4 0 0 0 11 0l.5.4a12 12 0 0 1-1.9.9l1.2 2a18.8 18.8 0 0 0 5.7-2.9c.5-4.7-.8-8.8-3.3-12.6ZM8.8 14.8c-1.1 0-2-1-2-2.2s.9-2.2 2-2.2 2 1 2 2.2-.9 2.2-2 2.2Zm6.4 0c-1.1 0-2-1-2-2.2s.9-2.2 2-2.2 2 1 2 2.2-.9 2.2-2 2.2Z"/></svg><span>Sign in with Discord</span><span class="button-arrow">↗</span></button>
+<div class="auth-note"><span class="shield">◇</span><p>Vanta uses Discord to verify your identity and membership. Your password is never shared with us.</p></div><div class="terms">BY CONTINUING, YOU AGREE TO USE VANTA CENTRAL RESPONSIBLY.</div></div><div class="below-card"><span>NEED HELP?</span><a href="https://discord.com/" target="_blank" rel="noopener noreferrer">Visit our Discord <span>↗</span></a></div></section></main>
+<footer class="site-footer"><span>© 2026 VANTA DESIGNS</span><span>BUILT FOR CREATORS. DESIGNED TO MOVE.</span><span class="footer-status"><i></i> ACCESS PORTAL</span></footer><div class="toast" id="toast" role="status" aria-live="polite"></div><script src="config.js"></script><script src="app.js"></script></body></html>
