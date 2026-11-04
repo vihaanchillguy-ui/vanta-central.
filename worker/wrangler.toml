@@ -1,0 +1,16 @@
+name = "vanta-central-auth"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Replace with the exact published Vanta Central website origin.
+APP_ORIGIN = "https://YOUR-GITHUB-USERNAME.github.io"
+# Discord Application > OAuth2 > Client ID (public identifier, not a secret).
+DISCORD_CLIENT_ID = "YOUR_DISCORD_APPLICATION_CLIENT_ID"
+# Vanta Designs Discord server ID.
+VANTA_GUILD_ID = "YOUR_VANTA_DISCORD_SERVER_ID"
+
+# Add these as encrypted Worker secrets, never in this file:
+# npx wrangler secret put DISCORD_CLIENT_SECRET
+# npx wrangler secret put DISCORD_BOT_TOKEN
+# npx wrangler secret put SESSION_SECRET
