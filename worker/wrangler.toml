@@ -4,9 +4,9 @@ compatibility_date = "2026-11-01"
 
 [vars]
 # Replace with the exact published Vanta Central website origin.
-APP_ORIGIN = "https://YOUR-GITHUB-USERNAME.github.io"
+APP_ORIGIN = "https://vihaanchillguy-ui.github.io"
 # Full published GitHub Pages URL, including the repository path if this is a project site.
-APP_URL = "https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPOSITORY/"
+APP_URL = "https://vihaanchillguy-ui.github.io/vanta-central./"
 # Discord Application > OAuth2 > Client ID (public identifier, not a secret).
 DISCORD_CLIENT_ID = "1563889602559873136"
 # Vanta Designs Discord server ID.
