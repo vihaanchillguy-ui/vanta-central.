@@ -12,6 +12,11 @@ DISCORD_CLIENT_ID = "1563889602559873136"
 # Vanta Designs Discord server ID.
 VANTA_GUILD_ID = "YOUR_VANTA_DISCORD_SERVER_ID"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "vanta-central-accounts"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+
 # Add these as encrypted Worker secrets, never in this file:
 # npx wrangler secret put DISCORD_CLIENT_SECRET
 # npx wrangler secret put DISCORD_BOT_TOKEN
