@@ -1,59 +1,36 @@
-# Vanta Central
+# Vanta Designs — Vanta Central
 
-Customer and staff portal for Vanta Designs. The frontend is hosted on GitHub Pages; Discord OAuth runs in a separate Cloudflare Worker so secrets never reach the browser.
+A focused account entry page for Vanta Designs. The current public interface intentionally shows only account creation and sign-in. Orders, staff workspaces, notifications and other features are hidden until their backend services actually exist.
 
-## Discord OAuth implementation
+## Account access
+- New users choose **Create a Vanta account**.
+- Returning users choose **Sign in with Discord**.
+- Both use Discord OAuth2 Authorization Code flow.
+- On first successful verification, the Worker creates a Vanta account record in Cloudflare D1. Returning users have their profile and last-login time updated.
+- Vanta server membership is required.
+- The Worker verifies current Discord roles server-side and issues a signed HttpOnly session.
 
-The repository now includes a Cloudflare Worker backend in `worker/`:
-- Discord OAuth2 Authorization Code flow with a random state value.
-- Discord identity lookup and Vanta guild membership verification.
-- Current Vanta role lookup on each authenticated profile request.
-- Signed, eight-hour HttpOnly session cookie.
-- Role-derived permission scopes. Department designer roles remain separated.
-- Logout and a minimal `/api/me` endpoint.
+The UI and backend code are committed, but account creation is not live until Cloudflare Worker, D1 and Discord OAuth configuration are completed.
 
-**The code is committed, but OAuth is not live until the Worker is deployed and configured.** Do not claim sign-in works before completing the setup below.
+## Deploy account storage
+1. Install Wrangler: `npm install -g wrangler`.
+2. From `worker/`, run `npx wrangler login`.
+3. Create the database: `npx wrangler d1 create vanta-central-accounts`.
+4. Copy the returned database ID into `worker/wrangler.toml` at `[[d1_databases]]`.
+5. Apply the schema: `npx wrangler d1 execute vanta-central-accounts --remote --file=./schema.sql`.
+6. Set `APP_ORIGIN` to the exact website origin and `APP_URL` to the full published GitHub Pages URL.
+7. Set the Vanta Discord server ID.
+8. Set encrypted secrets: `npx wrangler secret put DISCORD_CLIENT_SECRET`, `npx wrangler secret put DISCORD_BOT_TOKEN`, and `npx wrangler secret put SESSION_SECRET`.
+9. Deploy from `worker/`: `npx wrangler deploy`.
+10. In Discord Developer Portal → OAuth2, add `https://YOUR-WORKER-DOMAIN/auth/callback` as a redirect URI.
+11. Set `window.VANTA_AUTH_API` in root `config.js` to the deployed Worker URL, commit and publish the site.
 
-## Deploy the authentication Worker
+## Security
+- Never commit Discord client secrets, bot tokens or session secrets.
+- D1 stores Discord account identifiers and profile metadata only. OAuth access tokens are not stored.
+- Guild membership and roles are checked by the Worker, not trusted from browser input.
+- Account sessions are signed, HttpOnly, Secure and time-limited.
+- Use a same-site custom domain for the frontend and Worker where possible. Cross-site cookie restrictions can affect GitHub Pages + Worker deployments.
 
-1. Install Node.js, then install Wrangler: `npm install -g wrangler`.
-2. In a terminal, from the repository's `worker` folder, run `npx wrangler login`.
-3. Edit `wrangler.toml`: set `APP_ORIGIN` to the exact website origin (origin only, no path), `APP_URL` to the full GitHub Pages URL, `DISCORD_CLIENT_ID` to the Discord application's client ID, and `VANTA_GUILD_ID` to the Vanta Discord server ID.
-4. Set encrypted secrets. Never commit these values:
-   - `npx wrangler secret put DISCORD_CLIENT_SECRET`
-   - `npx wrangler secret put DISCORD_BOT_TOKEN`
-   - `npx wrangler secret put SESSION_SECRET` (use a long random value)
-5. From the `worker` folder, run `npx wrangler deploy`.
-6. In Discord Developer Portal → your application → OAuth2, add this exact redirect URI: `https://YOUR-WORKER-DOMAIN/auth/callback`.
-7. Put the deployed Worker base URL into `config.js` as `window.VANTA_AUTH_API`.
-8. Commit the config change and reload the Pages site.
-
-For production, use a custom domain so the frontend and Worker are same-site. The Worker currently sets Secure, HttpOnly, SameSite=None cookies to support separate origins, but browser privacy controls can block cross-site cookies on some configurations. A same-site custom domain is the more reliable deployment.
-
-## Required Discord bot access
-
-The GMRP Central bot must be in the Vanta server and have permission to view members/roles. The Worker uses the bot token only server-side to check membership and retrieve role names. Do not put the bot token in `config.js`, `app.js`, GitHub Pages, or any public repository file.
-
-## Role policy
-
-The Worker maps roles by their current Discord role names:
-- Executives: full permission scope (`*`).
-- Co-Executives: management.
-- Operations roles: operations scope.
-- Sales roles: sales and order creation.
-- Support roles: support.
-- Clothing Designer: clothing orders only.
-- Livery Designer: livery orders only.
-- Graphics Designer: graphics orders only.
-- Creative Team: creative scope.
-- Customer-facing roles: customer scope only.
-
-Wick, Server Automation, Quarantine, notification roles, Verified, Bloxlink, Melonly, Unverified and GMRP Central do not grant staff permissions. Role names must match exactly. For a hardened production release, replace name-based mappings with verified Discord role IDs.
-
-## Current limitations
-
-OAuth verifies identity, Vanta membership and role names. It does **not** yet provide the order database, customer order isolation, staff order APIs, file uploads/storage, or GMRP Central delivery DMs. Those need their own server-side implementation and authorization checks. The frontend must never be treated as the security boundary.
-
-## GitHub Pages
-
-Enable Settings → Pages → Deploy from a branch → `main` → `/(root)`. GitHub Pages only serves the static frontend; it does not run the Worker.
+## Current feature scope
+Only account creation/sign-in and session verification are exposed in the UI. The orders database, order APIs, designer uploads, customer notifications and GMRP Central DM delivery are not implemented, so they are deliberately not advertised as available.
