@@ -10,7 +10,7 @@ APP_URL = "https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPOSITORY/"
 # Discord Application > OAuth2 > Client ID (public identifier, not a secret).
 DISCORD_CLIENT_ID = "1563889602559873136"
 # Vanta Designs Discord server ID.
-VANTA_GUILD_ID = "YOUR_VANTA_DISCORD_SERVER_ID"
+VANTA_GUILD_ID = "1564583995839217674"
 
 [[d1_databases]]
 binding = "DB"
