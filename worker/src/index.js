@@ -140,6 +140,7 @@ async function handle(request, env) {
 
   if (url.pathname === "/auth/discord" && request.method === "GET") {
     const state = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    const mode = url.searchParams.get("mode") === "signup" ? "signup" : "login";
     const redirect = new URL("https://discord.com/oauth2/authorize");
     redirect.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
     redirect.searchParams.set("response_type", "code");
@@ -147,7 +148,7 @@ async function handle(request, env) {
     redirect.searchParams.set("scope", "identify");
     redirect.searchParams.set("state", state);
     const headers = new Headers({ location: redirect.toString(), "cache-control": "no-store" });
-    headers.append("set-cookie", cookie(STATE_COOKIE, state, 600));
+    headers.append("set-cookie", cookie(STATE_COOKIE, state + "." + mode, 600));
     return new Response(null, { status: 302, headers });
   }
 
@@ -156,7 +157,8 @@ async function handle(request, env) {
     const state = url.searchParams.get("state");
     const savedState = getCookie(request, STATE_COOKIE);
     const clearState = clearCookie(STATE_COOKIE);
-    if (!code || !state || !savedState || state !== savedState) {
+    const [expectedState, authMode] = savedState.split(".");
+    if (!code || !state || !expectedState || state !== expectedState) {
       return new Response("Discord sign-in could not be verified. Return to Vanta Central and try again.", { status: 400, headers: { "set-cookie": clearState } });
     }
 
@@ -184,6 +186,14 @@ async function handle(request, env) {
     catch { return new Response("Vanta membership could not be checked. Please try again later.", { status: 503, headers: { "set-cookie": clearState } }); }
     if (!member) return new Response("You must be a member of the Vanta Designs Discord server to use Vanta Central.", { status: 403, headers: { "set-cookie": clearState } });
 
+    if (!env.DB) return new Response("Account storage is not configured. Please contact Vanta support.", { status: 503, headers: { "set-cookie": clearState } });
+    const now = new Date().toISOString();
+    try {
+      await env.DB.prepare("INSERT INTO accounts (discord_id, username, display_name, avatar_hash, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(discord_id) DO UPDATE SET username=excluded.username, display_name=excluded.display_name, avatar_hash=excluded.avatar_hash, last_login_at=excluded.last_login_at").bind(user.id, user.username, user.global_name || user.username, user.avatar || null, now, now).run();
+    } catch {
+      return new Response("Your Vanta account could not be saved. Please try again later.", { status: 503, headers: { "set-cookie": clearState } });
+    }
+
     const session = await sign(JSON.stringify({
       id: user.id,
       username: user.username,
@@ -192,7 +202,7 @@ async function handle(request, env) {
       exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS
     }), env.SESSION_SECRET);
     const headers = new Headers({
-      location: env.APP_URL,
+      location: env.APP_URL + "?discord=connected&mode=" + (authMode === "signup" ? "signup" : "login"),
       "cache-control": "no-store"
     });
     headers.append("set-cookie", cookie(SESSION_COOKIE, session, SESSION_SECONDS));
