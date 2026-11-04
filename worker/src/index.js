@@ -146,9 +146,9 @@ async function handle(request, env) {
     redirect.searchParams.set("redirect_uri", `${url.origin}/auth/callback`);
     redirect.searchParams.set("scope", "identify");
     redirect.searchParams.set("state", state);
-    return Response.redirect(redirect.toString(), 302, {
-      headers: { "set-cookie": cookie(STATE_COOKIE, state, 600), "cache-control": "no-store" }
-    });
+    const headers = new Headers({ location: redirect.toString(), "cache-control": "no-store" });
+    headers.append("set-cookie", cookie(STATE_COOKIE, state, 600));
+    return new Response(null, { status: 302, headers });
   }
 
   if (url.pathname === "/auth/callback" && request.method === "GET") {
@@ -191,17 +191,13 @@ async function handle(request, env) {
       avatar: user.avatar,
       exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS
     }), env.SESSION_SECRET);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: env.APP_ORIGIN + "/?discord=connected",
-        "set-cookie": [
-          cookie(SESSION_COOKIE, session, SESSION_SECONDS),
-          clearState
-        ].join(", "),
-        "cache-control": "no-store"
-      }
+    const headers = new Headers({
+      location: env.APP_URL,
+      "cache-control": "no-store"
     });
+    headers.append("set-cookie", cookie(SESSION_COOKIE, session, SESSION_SECONDS));
+    headers.append("set-cookie", clearState);
+    return new Response(null, { status: 302, headers });
   }
 
   if (url.pathname === "/auth/logout" && request.method === "POST") {
