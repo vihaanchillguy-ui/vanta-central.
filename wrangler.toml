@@ -15,9 +15,6 @@ DISCORD_CLIENT_ID = "1568489901815496774"
 DISCORD_PUBLIC_KEY = "869e68464c8277796538ea1103d2bd149d3245d983cbc69963f0ecbd510116ec"
 VANTA_GUILD_ID = "1564583995839217674"
 
-[[r2_buckets]]
-binding = "ORDER_MEDIA"
-bucket_name = "vanta-order-progress"
 
 [[d1_databases]]
 binding = "DB"
