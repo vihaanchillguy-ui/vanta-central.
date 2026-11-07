@@ -1,0 +1,15 @@
+name = "vanta-central"
+main = "worker/src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+APP_ORIGIN = "https://vihaanchillguy-ui.github.io"
+APP_URL = "https://vihaanchillguy-ui.github.io/vanta-central./"
+DISCORD_CLIENT_ID = "1563889602559873136"
+VANTA_GUILD_ID = "1564583995839217674"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vanta-central-accounts"
+database_id = "c3e14be4-764a-4589-b3a7-c42e55f57ab5"
