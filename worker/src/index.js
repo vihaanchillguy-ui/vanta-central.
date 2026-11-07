@@ -126,19 +126,16 @@ async function handleApi(request,env,url,origin,session){
   const id=decodeURIComponent(progressMatch[1]),order=await env.DB.prepare("SELECT id FROM orders WHERE id=?").bind(id).first();
   if(!order)return json({error:"Order not found"},404,headers);
   if(!has(perms,"orders:update"))return json({error:"You cannot post progress updates"},403,headers);
-  if(!env.ORDER_MEDIA)return json({error:"Order image storage is not configured yet"},503,headers);
   const b=await request.json(),message=String(b.message||"").slice(0,2000),images=Array.isArray(b.images)?b.images:[];
   if(images.length>8)return json({error:"Upload up to 8 images per update"},400,headers);
   const progressId=crypto.randomUUID(),now=new Date().toISOString();
   await env.DB.prepare("INSERT INTO order_progress(id,order_id,actor_discord_id,message,created_at) VALUES(?,?,?,?,?)").bind(progressId,id,session.id,message,now).run();
   for(const image of images){
-   const match=String(image.dataUrl||"").match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
-   if(!match)return json({error:"Only PNG, JPG, WEBP and GIF images are supported"},400,headers);
+   const match=String(image.dataUrl||"").match(/^data:(image\/webp);base64,([A-Za-z0-9+/=]+)$/);
+   if(!match)return json({error:"Images must be converted to WEBP before upload"},400,headers);
    const bytes=Uint8Array.from(atob(match[2]),c=>c.charCodeAt(0));
-   if(bytes.byteLength>4*1024*1024)return json({error:"Each image must be 4 MB or smaller"},400,headers);
-   const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"}[match[1]],key=id+"/"+progressId+"/"+crypto.randomUUID()+"."+ext;
-   await env.ORDER_MEDIA.put(key,bytes,{httpMetadata:{contentType:match[1]}});
-   await env.DB.prepare("INSERT INTO order_progress_images(id,progress_id,order_id,object_key,file_name,content_type,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),progressId,id,key,String(image.name||"Progress image").slice(0,180),match[1],now).run();
+   if(bytes.byteLength>1250000)return json({error:"Each compressed image must be 1.25 MB or smaller"},400,headers);
+   await env.DB.prepare("INSERT INTO order_progress_images(id,progress_id,order_id,data_url,file_name,content_type,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),progressId,id,image.dataUrl,String(image.name||"Progress image").slice(0,180),match[1],now).run();
   }
   await recordEvent(env,id,session.id,"Progress update",message||images.length+" image(s) added");
   return json({ok:true,id:progressId},201,headers);
@@ -152,11 +149,12 @@ async function handleApi(request,env,url,origin,session){
  }
  const imageMatch=path.match(/^\/api\/order-images\/([^/]+)$/);
  if(imageMatch&&method==="GET"){
-  const imageId=decodeURIComponent(imageMatch[1]),row=await env.DB.prepare("SELECT i.object_key,i.content_type,o.customer_discord_id FROM order_progress_images i JOIN orders o ON o.id=i.order_id WHERE i.id=?").bind(imageId).first();
+  const imageId=decodeURIComponent(imageMatch[1]),row=await env.DB.prepare("SELECT i.data_url,i.content_type,o.customer_discord_id FROM order_progress_images i JOIN orders o ON o.id=i.order_id WHERE i.id=?").bind(imageId).first();
   if(!row)return json({error:"Image not found"},404,headers);
   if(!has(perms,"orders:view")&&row.customer_discord_id!==session.id)return json({error:"You cannot view this image"},403,headers);
-  const object=await env.ORDER_MEDIA.get(row.object_key);if(!object)return json({error:"Image not found"},404,headers);
-  return new Response(object.body,{headers:{...headers,"content-type":row.content_type,"cache-control":"private, max-age=300","x-content-type-options":"nosniff"}});
+  if(!row.data_url)return json({error:"Image not found"},404,headers);
+  const encoded=row.data_url.split(",")[1]||"",bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+  return new Response(bytes,{headers:{...headers,"content-type":row.content_type,"cache-control":"private, max-age=300","x-content-type-options":"nosniff"}});
  }
  if(path==="/api/customers"&&method==="GET"){
   if(!canSeeCustomers(perms))return json({error:"You cannot view customers"},403,headers);
