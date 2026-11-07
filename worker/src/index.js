@@ -67,6 +67,12 @@ async function handleApi(request,env,url,origin,session){
  const access=await getAccess(session.id,env);if(!access)return json({error:"VANTA membership required"},403,headers);
  const perms=access.permissions;
  if(path==="/api/me"&&method==="GET")return json({authenticated:true,user:{id:session.id,username:session.username,displayName:session.global_name,avatar:session.avatar},roles:access.discordRoles,discordRoles:access.discordRoles,vantaRoles:access.vantaRoles,permissions:perms},200,headers);
+ if(path==="/api/staff"&&method==="GET"){
+  if(!has(perms,"orders:assign"))return json({error:"You cannot assign orders"},403,headers);
+  const rows=await env.DB.prepare("SELECT discord_id,username,display_name FROM accounts ORDER BY display_name").all(),staff=[];
+  for(const member of rows.results||[]){try{const a=await getAccess(member.discord_id,env);if(a&&(has(a.permissions,"orders:update")||has(a.permissions,"orders:assign")))staff.push(member)}catch{}}
+  return json({staff},200,headers);
+ }
  if(path==="/api/orders"&&method==="GET"){
   if(!has(perms,"orders:view")&&!has(perms,"customer"))return json({error:"You cannot view orders"},403,headers);
   const own=!canSeeCustomers(perms)&&!has(perms,"orders:view");
@@ -80,6 +86,11 @@ async function handleApi(request,env,url,origin,session){
   const exists=await env.DB.prepare("SELECT discord_id FROM accounts WHERE discord_id=?").bind(customer).first();if(!exists)return json({error:"Customer must sign in to VANTA Central first"},404,headers);
   const id="VNT-"+crypto.randomUUID().slice(0,8).toUpperCase(),now=new Date().toISOString();
   await env.DB.prepare("INSERT INTO orders(id,customer_discord_id,title,service,package,quantity,price_robux,status,assigned_to,requirements,internal_notes,payment_status,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,customer,title,String(b.service||"Other"),String(b.package||"Custom"),Math.max(1,Number(b.quantity)||1),Math.max(0,Number(b.priceRobux)||0),String(b.status||"Awaiting Payment"),String(b.assignedTo||""),String(b.requirements||""),String(b.internalNotes||""),String(b.paymentStatus||"Unpaid"),session.id,now,now).run();
+  if(Array.isArray(b.assignedStaffIds)&&has(perms,"orders:assign")){
+   const ids=[...new Set(b.assignedStaffIds.map(String))].slice(0,20);
+   for(const staffId of ids){const member=await getAccess(staffId,env);if(!member||(!has(member.permissions,"orders:update")&&!has(member.permissions,"orders:assign")))return json({error:"Every assignee must be an order-handling VANTA staff member"},400,headers)}
+   for(const staffId of ids)await env.DB.prepare("INSERT INTO order_assignments(order_id,discord_id,assigned_by,assigned_at) VALUES(?,?,?,?)").bind(id,staffId,session.id,now).run();
+  }
   await recordEvent(env,id,session.id,"Order created",title);
   return json({ok:true,id},201,headers);
  }
@@ -88,12 +99,20 @@ async function handleApi(request,env,url,origin,session){
   const id=decodeURIComponent(orderMatch[1]),order=await env.DB.prepare("SELECT o.*,a.username customer_username,a.display_name customer_name FROM orders o LEFT JOIN accounts a ON a.discord_id=o.customer_discord_id WHERE o.id=?").bind(id).first();
   if(!order)return json({error:"Order not found"},404,headers);
   if(!has(perms,"orders:view")&&order.customer_discord_id!==session.id)return json({error:"You cannot view this order"},403,headers);
-  return json(order,200,headers);
+  const [assigned,progress]=await Promise.all([env.DB.prepare("SELECT oa.discord_id,a.username,a.display_name FROM order_assignments oa LEFT JOIN accounts a ON a.discord_id=oa.discord_id WHERE oa.order_id=? ORDER BY oa.assigned_at").bind(id).all(),env.DB.prepare("SELECT id,actor_discord_id,message,created_at FROM order_progress WHERE order_id=? ORDER BY created_at DESC").bind(id).all()]);
+  return json({...order,assignedStaff:assigned.results||[],progress:progress.results||[]},200,headers);
  }
  if(orderMatch&&method==="PATCH"){
   const id=decodeURIComponent(orderMatch[1]),old=await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();if(!old)return json({error:"Order not found"},404,headers);
   if(!has(perms,"orders:update")&&!has(perms,"orders:assign"))return json({error:"You cannot update orders"},403,headers);
   const b=await request.json(),allowed=["title","service","package","quantity","price_robux","status","assigned_to","requirements","internal_notes","payment_status"];
+  if(Array.isArray(b.assignedStaffIds)){
+   if(!has(perms,"orders:assign"))return json({error:"You cannot assign orders"},403,headers);
+   const ids=[...new Set(b.assignedStaffIds.map(String))].slice(0,20);
+   for(const staffId of ids){const member=await getAccess(staffId,env);if(!member||(!has(member.permissions,"orders:update")&&!has(member.permissions,"orders:assign")))return json({error:"Every assignee must be an order-handling VANTA staff member"},400,headers)}
+   await env.DB.prepare("DELETE FROM order_assignments WHERE order_id=?").bind(id).run();
+   for(const staffId of ids)await env.DB.prepare("INSERT INTO order_assignments(order_id,discord_id,assigned_by,assigned_at) VALUES(?,?,?,?)").bind(id,staffId,session.id,new Date().toISOString()).run();
+  }
   if(b.status&&!ORDER_STATUSES.includes(b.status))return json({error:"Invalid order status"},400,headers);
   const changes=[];const values=[];for(const key of allowed){if(Object.prototype.hasOwnProperty.call(b,key)){if(key==="assigned_to"&&!has(perms,"orders:assign"))return json({error:"You cannot assign orders"},403,headers);changes.push(key+"=?");values.push(b[key]===null?"":b[key]);}}
   if(!changes.length)return json({error:"No changes supplied"},400,headers);
@@ -101,6 +120,43 @@ async function handleApi(request,env,url,origin,session){
   await env.DB.prepare("UPDATE orders SET "+changes.join(",")+" WHERE id=?").bind(...values).run();
   await recordEvent(env,id,session.id,"Order updated",JSON.stringify(b));
   return json({ok:true},200,headers);
+ }
+ const progressMatch=path.match(/^\/api\/orders\/([^/]+)\/progress$/);
+ if(progressMatch&&method==="POST"){
+  const id=decodeURIComponent(progressMatch[1]),order=await env.DB.prepare("SELECT id FROM orders WHERE id=?").bind(id).first();
+  if(!order)return json({error:"Order not found"},404,headers);
+  if(!has(perms,"orders:update"))return json({error:"You cannot post progress updates"},403,headers);
+  if(!env.ORDER_MEDIA)return json({error:"Order image storage is not configured yet"},503,headers);
+  const b=await request.json(),message=String(b.message||"").slice(0,2000),images=Array.isArray(b.images)?b.images:[];
+  if(images.length>8)return json({error:"Upload up to 8 images per update"},400,headers);
+  const progressId=crypto.randomUUID(),now=new Date().toISOString();
+  await env.DB.prepare("INSERT INTO order_progress(id,order_id,actor_discord_id,message,created_at) VALUES(?,?,?,?,?)").bind(progressId,id,session.id,message,now).run();
+  for(const image of images){
+   const match=String(image.dataUrl||"").match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
+   if(!match)return json({error:"Only PNG, JPG, WEBP and GIF images are supported"},400,headers);
+   const bytes=Uint8Array.from(atob(match[2]),c=>c.charCodeAt(0));
+   if(bytes.byteLength>4*1024*1024)return json({error:"Each image must be 4 MB or smaller"},400,headers);
+   const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"}[match[1]],key=id+"/"+progressId+"/"+crypto.randomUUID()+"."+ext;
+   await env.ORDER_MEDIA.put(key,bytes,{httpMetadata:{contentType:match[1]}});
+   await env.DB.prepare("INSERT INTO order_progress_images(id,progress_id,order_id,object_key,file_name,content_type,created_at) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),progressId,id,key,String(image.name||"Progress image").slice(0,180),match[1],now).run();
+  }
+  await recordEvent(env,id,session.id,"Progress update",message||images.length+" image(s) added");
+  return json({ok:true,id:progressId},201,headers);
+ }
+ if(progressMatch&&method==="GET"){
+  const id=decodeURIComponent(progressMatch[1]),order=await env.DB.prepare("SELECT customer_discord_id FROM orders WHERE id=?").bind(id).first();
+  if(!order)return json({error:"Order not found"},404,headers);
+  if(!has(perms,"orders:view")&&order.customer_discord_id!==session.id)return json({error:"You cannot view this order"},403,headers);
+  const rows=await env.DB.prepare("SELECT p.id,p.actor_discord_id,p.message,p.created_at,i.id image_id,i.file_name,i.content_type FROM order_progress p LEFT JOIN order_progress_images i ON i.progress_id=p.id WHERE p.order_id=? ORDER BY p.created_at DESC").bind(id).all();
+  return json({updates:rows.results||[]},200,headers);
+ }
+ const imageMatch=path.match(/^\/api\/order-images\/([^/]+)$/);
+ if(imageMatch&&method==="GET"){
+  const imageId=decodeURIComponent(imageMatch[1]),row=await env.DB.prepare("SELECT i.object_key,i.content_type,o.customer_discord_id FROM order_progress_images i JOIN orders o ON o.id=i.order_id WHERE i.id=?").bind(imageId).first();
+  if(!row)return json({error:"Image not found"},404,headers);
+  if(!has(perms,"orders:view")&&row.customer_discord_id!==session.id)return json({error:"You cannot view this image"},403,headers);
+  const object=await env.ORDER_MEDIA.get(row.object_key);if(!object)return json({error:"Image not found"},404,headers);
+  return new Response(object.body,{headers:{...headers,"content-type":row.content_type,"cache-control":"private, max-age=300","x-content-type-options":"nosniff"}});
  }
  if(path==="/api/customers"&&method==="GET"){
   if(!canSeeCustomers(perms))return json({error:"You cannot view customers"},403,headers);
