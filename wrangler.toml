@@ -11,7 +11,7 @@ run_worker_first = ["/auth/*", "/api/*", "/health"]
 [vars]
 APP_ORIGIN = "https://vanta-central.vihaanchillguy.workers.dev"
 APP_URL = "https://vanta-central.vihaanchillguy.workers.dev/"
-DISCORD_CLIENT_ID = "1563889602559873136"
+DISCORD_CLIENT_ID = "1563889602559873136"\nDISCORD_PUBLIC_KEY = "869e68464c8277796538ea1103d2bd149d3245d983cbc69963f0ecbd510116ec"
 VANTA_GUILD_ID = "1564583995839217674"
 
 [[d1_databases]]
