@@ -167,7 +167,8 @@ async function handleApi(request,env,url,origin,session){
  return json({error:"Not found"},404,headers);
 }
 
-function fromHex(value){if(!/^[0-9a-f]+$/i.test(value)||value.length%2)return new Uint8Array();return Uint8Array.from(value.match(/.{2}/g),x=>parseInt(x,16))}\nasync function verifyDiscordRequest(request,env,body){
+function fromHex(value){if(!/^[0-9a-f]+$/i.test(value)||value.length%2)return new Uint8Array();return Uint8Array.from(value.match(/.{2}/g),x=>parseInt(x,16))}
+async function verifyDiscordRequest(request,env,body){
  const signature=request.headers.get("X-Signature-Ed25519"),timestamp=request.headers.get("X-Signature-Timestamp");
  if(!signature||!timestamp||!env.DISCORD_PUBLIC_KEY)return false;
  try{
