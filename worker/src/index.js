@@ -121,6 +121,7 @@ async function handleApi(request,env,url,origin,session){
   if(!canManageRoles(perms))return json({error:"Management access required"},403,headers);
   const b=await request.json(),name=String(b.name||"").trim(),color=String(b.color||"#8794a8"),ps=Array.isArray(b.permissions)?b.permissions.filter(p=>ALL_PERMISSIONS.includes(p)||p==="*"):[];
   if(!name||name.length>32)return json({error:"Role name must be 1–32 characters"},400,headers);
+  if(!has(perms,"*")&&ps.some(p=>["*","management","roles:manage"].includes(p)))return json({error:"Only an Owner can grant management-level permissions"},403,headers);
   const id="custom-"+crypto.randomUUID().slice(0,12);
   try{await env.DB.prepare("INSERT INTO vanta_roles(id,name,color,permissions_json,is_system,created_at,updated_at) VALUES(?,?,?,?,0,?,?)").bind(id,name,color,JSON.stringify(ps),new Date().toISOString(),new Date().toISOString()).run()}catch{return json({error:"That role name may already exist"},409,headers)}
   return json({ok:true,id},201,headers);
@@ -131,6 +132,7 @@ async function handleApi(request,env,url,origin,session){
   const id=decodeURIComponent(roleMatch[1]),old=await env.DB.prepare("SELECT * FROM vanta_roles WHERE id=?").bind(id).first();if(!old)return json({error:"Role not found"},404,headers);
   if(old.is_system)return json({error:"Default system roles cannot be edited"},400,headers);
   const b=await request.json(),name=String(b.name??old.name).trim(),color=String(b.color??old.color),ps=Array.isArray(b.permissions)?b.permissions.filter(p=>ALL_PERMISSIONS.includes(p)||p==="*"):JSON.parse(old.permissions_json);
+  if(!has(perms,"*")&&ps.some(p=>["*","management","roles:manage"].includes(p)))return json({error:"Only an Owner can grant management-level permissions"},403,headers);
   try{await env.DB.prepare("UPDATE vanta_roles SET name=?,color=?,permissions_json=?,updated_at=? WHERE id=?").bind(name,color,JSON.stringify(ps),new Date().toISOString(),id).run()}catch{return json({error:"Role name already exists"},409,headers)}
   return json({ok:true},200,headers);
  }
@@ -138,8 +140,9 @@ async function handleApi(request,env,url,origin,session){
  if(assignMatch&&method==="POST"){
   if(!canManageRoles(perms))return json({error:"Management access required"},403,headers);
   const customer=decodeURIComponent(assignMatch[1]),b=await request.json(),roleId=String(b.roleId||"");
-  const [exists,role]=await Promise.all([env.DB.prepare("SELECT discord_id FROM accounts WHERE discord_id=?").bind(customer).first(),env.DB.prepare("SELECT id FROM vanta_roles WHERE id=?").bind(roleId).first()]);
+  const [exists,role]=await Promise.all([env.DB.prepare("SELECT discord_id FROM accounts WHERE discord_id=?").bind(customer).first(),env.DB.prepare("SELECT id,permissions_json FROM vanta_roles WHERE id=?").bind(roleId).first()]);
   if(!exists||!role)return json({error:"Customer or role not found"},404,headers);
+  const granted=JSON.parse(role.permissions_json||"[]");if(!has(perms,"*")&&granted.some(p=>["*","management","roles:manage"].includes(p)))return json({error:"Only an Owner can assign management-level roles"},403,headers);
   await env.DB.prepare("INSERT OR IGNORE INTO account_vanta_roles(discord_id,role_id,assigned_by,assigned_at) VALUES(?,?,?,?)").bind(customer,roleId,session.id,new Date().toISOString()).run();
   return json({ok:true},200,headers);
  }
