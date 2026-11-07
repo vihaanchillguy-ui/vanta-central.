@@ -6,7 +6,7 @@ workers_dev = true
 [assets]
 directory = "./public"
 binding = "ASSETS"
-run_worker_first = ["/auth/*", "/api/*", "/health"]
+run_worker_first = ["/auth/*", "/api/*", "/discord/*", "/health"]
 
 [vars]
 APP_ORIGIN = "https://vanta-central.vihaanchillguy.workers.dev"
