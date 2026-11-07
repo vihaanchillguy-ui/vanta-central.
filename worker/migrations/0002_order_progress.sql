@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS order_progress (
 CREATE INDEX IF NOT EXISTS idx_order_progress_order ON order_progress(order_id,created_at);
 CREATE TABLE IF NOT EXISTS order_progress_images (
  id TEXT PRIMARY KEY NOT NULL, progress_id TEXT NOT NULL, order_id TEXT NOT NULL,
- object_key TEXT NOT NULL UNIQUE, file_name TEXT NOT NULL, content_type TEXT NOT NULL, created_at TEXT NOT NULL,
+ data_url TEXT NOT NULL, file_name TEXT NOT NULL, content_type TEXT NOT NULL, created_at TEXT NOT NULL,
  FOREIGN KEY(progress_id) REFERENCES order_progress(id) ON DELETE CASCADE,
  FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
