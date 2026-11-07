@@ -92,8 +92,8 @@ function getCookie(request, name) {
 }
 
 function allowedOrigin(request, env) {
-  const origin = request.headers.get("Origin");
-  return origin && origin === env.APP_ORIGIN ? origin : "";
+  const origin = request.headers.get("Origin") || new URL(request.url).origin;
+  return origin === env.APP_ORIGIN ? origin : "";
 }
 
 function corsHeaders(origin) {
@@ -255,6 +255,7 @@ async function handle(request, env) {
     }, 200, { ...corsHeaders(origin) });
   }
 
+  if (env.ASSETS) return env.ASSETS.fetch(request);
   return json({ error: "Not found" }, 404);
 }
 
