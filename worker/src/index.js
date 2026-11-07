@@ -189,18 +189,18 @@ async function discordInteraction(request,env){
  let access;try{access=await getAccess(uid,env)}catch{return reply("I couldn't verify your VANTA server access right now.")};
  if(!access)return reply("You need to be a member of the VANTA Designs server to use this command.");
  const perms=access.permissions;
- if(name==="panel")return reply("**VANTA Central**\\nManage your orders and account here: "+env.APP_URL);
+ if(name==="panel")return reply("**VANTA Central**\nManage your orders and account here: "+env.APP_URL);
  if(name==="order"){
   if(sub==="list"){
    if(!has(perms,"orders:view")&&!has(perms,"customer"))return reply("You don't have permission to view orders.");
    const rows=has(perms,"orders:view")?await env.DB.prepare("SELECT id,title,status,customer_discord_id FROM orders ORDER BY created_at DESC LIMIT 10").all():await env.DB.prepare("SELECT id,title,status,customer_discord_id FROM orders WHERE customer_discord_id=? ORDER BY created_at DESC LIMIT 10").bind(uid).all();
-   const items=rows.results||[];return reply(items.length?"**Recent VANTA orders**\\n"+items.map(o=>"`"+o.id+"` · "+o.title+" · "+o.status).join("\\n"):"No orders found.");
+   const items=rows.results||[];return reply(items.length?"**Recent VANTA orders**\n"+items.map(o=>"`"+o.id+"` · "+o.title+" · "+o.status).join("\n"):"No orders found.");
   }
   if(sub==="view"){
    const id=String(getOpt("id")||"").trim(),o=await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
    if(!o)return reply("Order not found.");
    if(!has(perms,"orders:view")&&o.customer_discord_id!==uid)return reply("You don't have permission to view that order.");
-   return reply("**"+o.id+" · "+o.title+"**\\nStatus: "+o.status+"\\nService: "+o.service+"\\nPackage: "+o.package+"\\nQuantity: "+o.quantity+"\\nPrice: "+o.price_robux+" Robux");
+   return reply("**"+o.id+" · "+o.title+"**\nStatus: "+o.status+"\nService: "+o.service+"\nPackage: "+o.package+"\nQuantity: "+o.quantity+"\nPrice: "+o.price_robux+" Robux");
   }
   if(sub==="create"){
    if(!has(perms,"orders:create"))return reply("You don't have permission to create orders.");
@@ -241,7 +241,7 @@ async function discordInteraction(request,env){
   const query=String(getOpt("user")||"").trim(),customer=await env.DB.prepare("SELECT discord_id,username,display_name,created_at,last_login_at FROM accounts WHERE discord_id=? OR username LIKE ? OR display_name LIKE ? LIMIT 1").bind(query,"%"+query+"%","%"+query+"%").first();
   if(!customer)return reply("No VANTA Central customer found. They may need to sign in first.");
   const orders=await env.DB.prepare("SELECT id,title,status FROM orders WHERE customer_discord_id=? ORDER BY created_at DESC LIMIT 5").bind(customer.discord_id).all();
-  return reply("**Customer: "+customer.display_name+"** (@"+customer.username+")\\nDiscord: <@"+customer.discord_id+">\\n"+(orders.results||[]).map(o=>"`"+o.id+"` · "+o.title+" · "+o.status).join("\\n"));
+  return reply("**Customer: "+customer.display_name+"** (@"+customer.username+")\nDiscord: <@"+customer.discord_id+">\n"+(orders.results||[]).map(o=>"`"+o.id+"` · "+o.title+" · "+o.status).join("\n"));
  }
  return reply("Unknown VANTA command.");
 }
