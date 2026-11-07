@@ -3,9 +3,14 @@ main = "worker/src/index.js"
 compatibility_date = "2026-11-01"
 workers_dev = true
 
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/auth/*", "/api/*", "/health"]
+
 [vars]
-APP_ORIGIN = "https://vihaanchillguy-ui.github.io"
-APP_URL = "https://vihaanchillguy-ui.github.io/vanta-central./"
+APP_ORIGIN = "https://vanta-central.vihaanchillguy.workers.dev"
+APP_URL = "https://vanta-central.vihaanchillguy.workers.dev/"
 DISCORD_CLIENT_ID = "1563889602559873136"
 VANTA_GUILD_ID = "1564583995839217674"
 
