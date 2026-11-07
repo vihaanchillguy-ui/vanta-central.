@@ -1,4 +1,4 @@
-const applicationId = "1563889602559873136";
+const applicationId = "1568489901815496774";
 const guildId = "1564583995839217674";
 const token = process.env.DISCORD_BOT_TOKEN;
 if (!token) {
