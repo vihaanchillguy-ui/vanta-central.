@@ -244,8 +244,10 @@ async function discordInteraction(request,env){
   return reply("**Customer: "+customer.display_name+"** (@"+customer.username+")\\nDiscord: <@"+customer.discord_id+">\\n"+(orders.results||[]).map(o=>"`"+o.id+"` · "+o.title+" · "+o.status).join("\\n"));
  }
  return reply("Unknown VANTA command.");
-}\nasync function handle(request,env){
- const url=new URL(request.url),origin=allowedOrigin(request,env);\n if(url.pathname==="/discord/interactions"&&request.method==="POST")return discordInteraction(request,env);
+}
+async function handle(request,env){
+ const url=new URL(request.url),origin=allowedOrigin(request,env);
+ if(url.pathname==="/discord/interactions"&&request.method==="POST")return discordInteraction(request,env);
  if(request.method==="OPTIONS"){if(!origin)return new Response(null,{status:403});return new Response(null,{status:204,headers:corsHeaders(origin)})}
  if(url.pathname==="/health"){
   let tables=false;try{const r=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'").first();tables=Boolean(r)}catch{}
