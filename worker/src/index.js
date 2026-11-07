@@ -136,7 +136,25 @@ async function handle(request, env) {
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
   }
 
-  if (url.pathname === "/health") return json({ ok: true, service: "Vanta Central Auth" });
+  if (url.pathname === "/health") {
+    let accountsTable = false;
+    if (env.DB) {
+      try {
+        const row = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'").first();
+        accountsTable = Boolean(row);
+      } catch {}
+    }
+    const checks = {
+      discordClientId: Boolean(env.DISCORD_CLIENT_ID),
+      discordClientSecret: Boolean(env.DISCORD_CLIENT_SECRET),
+      discordBotToken: Boolean(env.DISCORD_BOT_TOKEN),
+      sessionSecret: Boolean(env.SESSION_SECRET),
+      databaseBinding: Boolean(env.DB),
+      accountsTable
+    };
+    const ready = Object.values(checks).every(Boolean);
+    return json({ ok: ready, service: "Vanta Central Auth", checks }, ready ? 200 : 503);
+  }
 
   if (url.pathname === "/auth/discord" && request.method === "GET") {
     const state = b64url(crypto.getRandomValues(new Uint8Array(32)));
