@@ -166,8 +166,49 @@ async function handleApi(request,env,url,origin,session){
  }
  return json({error:"Not found"},404,headers);
 }
-async function handle(request,env){
- const url=new URL(request.url),origin=allowedOrigin(request,env);
+
+async function verifyDiscordRequest(request,env,body){
+ const signature=request.headers.get("X-Signature-Ed25519"),timestamp=request.headers.get("X-Signature-Timestamp");
+ if(!signature||!timestamp||!env.DISCORD_PUBLIC_KEY)return false;
+ try{
+  const key=await crypto.subtle.importKey("raw",fromB64url(env.DISCORD_PUBLIC_KEY),{name:"Ed25519"},false,["verify"]);
+  return await crypto.subtle.verify({name:"Ed25519"},key,fromB64url(signature),new TextEncoder().encode(timestamp+body));
+ }catch{return false}
+}
+async function discordInteraction(request,env){
+ const body=await request.text();
+ if(!await verifyDiscordRequest(request,env,body))return new Response("Invalid request signature",{status:401});
+ const i=JSON.parse(body);
+ const reply=(content,ephemeral=true)=>json({type:4,data:{content,flags:ephemeral?64:0}});
+ if(i.type===1)return json({type:1});
+ if(i.type!==2)return json({error:"Unsupported interaction"},400);
+ const name=i.data?.name,opts=i.data?.options||[],sub=opts[0]?.name;
+ const getOpt=(key)=>opts.find(o=>o.name===key)?.value;
+ const user=i.member?.user||i.user,uid=user?.id;
+ if(!uid)return reply("I couldn't identify your Discord account.");
+ let access;try{access=await getAccess(uid,env)}catch{return reply("I couldn't verify your VANTA server access right now.")};
+ if(!access)return reply("You need to be a member of the VANTA Designs server to use this command.");
+ const perms=access.permissions;
+ if(name==="panel")return reply("**VANTA Central**\\nManage your orders and account here: "+env.APP_URL+"\\n\\nStaff tools and customer access are controlled by your VANTA permissions.");
+ if(name==="order"){
+  if(sub==="list"){
+   if(!has(perms,"orders:view")&&!has(perms,"customer"))return reply("You don't have permission to view orders.");
+   const rows=has(perms,"orders:view")?await env.DB.prepare("SELECT id,title,status,customer_discord_id FROM orders ORDER BY created_at DESC LIMIT 10").all():await env.DB.prepare("SELECT id,title,status,customer_discord_id FROM orders WHERE customer_discord_id=? ORDER BY created_at DESC LIMIT 10").bind(uid).all();
+   const items=rows.results||[];return reply(items.length?"**Recent VANTA orders**\\n"+items.map(o=>o.id+" · "+o.title+" · "+o.status).join("\\n"):"No orders found.");
+  }
+  if(sub==="view"){
+   const id=String(getOpt("id")||"").trim();if(!id)return reply("Provide an order ID.");
+   const o=await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+   if(!o)return reply("Order not found.");
+   if(!has(perms,"orders:view")&&o.customer_discord_id!==uid)return reply("You don't have permission to view that order.");
+   return reply("**"+o.id+" · "+o.title+"**\\nStatus: "+o.status+"\\nService: "+o.service+"\\nPackage: "+o.package+"\\nQuantity: "+o.quantity+"\\nPrice: "+o.price_robux+" Robux");
+  }
+  return reply("Unknown order action.");
+ }
+ return reply("Unknown VANTA command.");
+}
+\nasync function handle(request,env){
+ const url=new URL(request.url),origin=allowedOrigin(request,env);\n if(url.pathname==="/discord/interactions"&&request.method==="POST")return discordInteraction(request,env);
  if(request.method==="OPTIONS"){if(!origin)return new Response(null,{status:403});return new Response(null,{status:204,headers:corsHeaders(origin)})}
  if(url.pathname==="/health"){
   let tables=false;try{const r=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'").first();tables=Boolean(r)}catch{}
