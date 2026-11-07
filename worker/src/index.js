@@ -113,7 +113,7 @@ async function handleApi(request,env,url,origin,session){
   return json({customer,discordRoles,vantaRoles:(vrows.results||[]).map(r=>({id:r.id,name:r.name,color:r.color,permissions:JSON.parse(r.permissions_json||"[]")})),orders:orders.results||[]},200,headers);
  }
  if(path==="/api/vanta-roles"&&method==="GET"){
-  if(!has(perms,"roles:view")&&!canManageRoles(perms))return json({error:"You cannot view VANTA roles"},403,headers);
+  if(!has(perms,"roles:view")&&!canManageRoles(perms)&&!canSeeCustomers(perms))return json({error:"You cannot view VANTA roles"},403,headers);
   const rows=await env.DB.prepare("SELECT id,name,color,permissions_json,is_system FROM vanta_roles ORDER BY is_system DESC,name").all();
   return json({roles:(rows.results||[]).map(r=>({...r,permissions:JSON.parse(r.permissions_json||"[]")})),availablePermissions:ALL_PERMISSIONS},200,headers);
  }
