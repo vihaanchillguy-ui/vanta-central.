@@ -1,0 +1,1 @@
+window.VANTA_AUTH_API = location.origin;
