@@ -84,6 +84,12 @@ async function handleApi(request,env,url,origin,session){
   return json({ok:true,id},201,headers);
  }
  const orderMatch=path.match(/^\/api\/orders\/([^/]+)$/);
+ if(orderMatch&&method==="GET"){
+  const id=decodeURIComponent(orderMatch[1]),order=await env.DB.prepare("SELECT o.*,a.username customer_username,a.display_name customer_name FROM orders o LEFT JOIN accounts a ON a.discord_id=o.customer_discord_id WHERE o.id=?").bind(id).first();
+  if(!order)return json({error:"Order not found"},404,headers);
+  if(!has(perms,"orders:view")&&order.customer_discord_id!==session.id)return json({error:"You cannot view this order"},403,headers);
+  return json(order,200,headers);
+ }
  if(orderMatch&&method==="PATCH"){
   const id=decodeURIComponent(orderMatch[1]),old=await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();if(!old)return json({error:"Order not found"},404,headers);
   if(!has(perms,"orders:update")&&!has(perms,"orders:assign"))return json({error:"You cannot update orders"},403,headers);
