@@ -40,7 +40,7 @@ function corsHeaders(origin){return {"access-control-allow-origin":origin,"acces
 async function discordFetch(path,token){return fetch(DISCORD_API+path,{headers:{Authorization:token}})}
 async function getVantaMember(userId,env){
  const [mr,rr]=await Promise.all([discordFetch(`/guilds/${env.VANTA_GUILD_ID}/members/${userId}`,`Bot ${env.DISCORD_BOT_TOKEN}`),discordFetch(`/guilds/${env.VANTA_GUILD_ID}/roles`,`Bot ${env.DISCORD_BOT_TOKEN}`)]);
- if(mr.status===404)return null;if(!mr.ok||!rr.ok)throw new Error("Discord membership verification failed");
+ if(mr.status===404)return null;if(!mr.ok||!rr.ok)throw new Error(`Discord membership verification failed (member: ${mr.status}, roles: ${rr.status})`);
  const member=await mr.json(),roles=await rr.json(),roleNames=roles.filter(r=>member.roles.includes(r.id)).map(r=>r.name),permissions=new Set();
  for(const name of roleNames){if(!BLOCKED_ROLE_NAMES.has(name))for(const p of ROLE_PERMISSIONS[name]||[])permissions.add(p)}
  return {roleNames,permissions:[...permissions]};
@@ -322,7 +322,7 @@ async function handle(request,env){
   const tr=await fetch(`${DISCORD_API}/oauth2/token`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:env.DISCORD_CLIENT_ID,client_secret:env.DISCORD_CLIENT_SECRET,grant_type:"authorization_code",code,redirect_uri:`${url.origin}/auth/callback`})});
   if(!tr.ok)return new Response("Discord token exchange failed.",{status:502,headers:{"set-cookie":clearCookie(STATE_COOKIE)}});
   const oauth=await tr.json(),ur=await fetch(`${DISCORD_API}/users/@me`,{headers:{Authorization:`Bearer ${oauth.access_token}`}});if(!ur.ok)return new Response("Could not retrieve your Discord account.",{status:502});
-  const user=await ur.json();let member;try{member=await getVantaMember(user.id,env)}catch{return new Response("VANTA membership could not be checked. Try again.",{status:503})}
+  const user=await ur.json();let member;try{member=await getVantaMember(user.id,env)}catch(error){console.error("VANTA membership verification failed:",error);return new Response("VANTA membership could not be checked. Try again.",{status:503})}
   if(!member)return new Response("Join the VANTA Designs Discord server before using VANTA Central.",{status:403});
   const now=new Date().toISOString();await env.DB.prepare("INSERT INTO accounts(discord_id,username,display_name,avatar_hash,created_at,last_login_at) VALUES(?,?,?,?,?,?) ON CONFLICT(discord_id) DO UPDATE SET username=excluded.username,display_name=excluded.display_name,avatar_hash=excluded.avatar_hash,last_login_at=excluded.last_login_at").bind(user.id,user.username,user.global_name||user.username,user.avatar||null,now,now).run();
   await env.DB.prepare("INSERT OR IGNORE INTO account_vanta_roles(discord_id,role_id,assigned_by,assigned_at) VALUES(?,?,?,?)").bind(user.id,"role-customer","system",now).run();
