@@ -16,7 +16,7 @@ function shell(data){
  $("#user-avatar").innerHTML=u.avatar?'<img src="https://cdn.discordapp.com/avatars/'+encodeURIComponent(u.id)+'/'+encodeURIComponent(u.avatar)+'?size=96" alt="">':esc((u.username||"V").charAt(0).toUpperCase());
  $("#user-roles").textContent=(data.discordRoles||[]).join(" · ")||"No Discord roles";
  const nav=[["overview","Overview"],["orders","Orders"],["customers","Customers"],["roles","VANTA roles"]];
- $("#nav").innerHTML=nav.filter(([id])=>id==="overview"||id==="orders"&&(can("orders:view")||can("customer"))||id==="customers"&&can("customers:view")||id==="roles"&&(can("roles:view")||can("roles:manage")||can("management"))).map(([id,label])=>'<button class="nav-item" data-tab="'+id+'">'+label+'</button>').join("");
+ $("#nav").innerHTML=nav.filter(([id])=>id==="overview"||id==="orders"&&(can("orders:view")||can("customer"))||id==="customers"&&(can("customers:view")||can("orders:create"))||id==="roles"&&(can("roles:view")||can("roles:manage")||can("management"))).map(([id,label])=>'<button class="nav-item" data-tab="'+id+'">'+label+'</button>').join("");
  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>loadTab(b.dataset.tab));
  $("#signout").onclick=async()=>{try{await request("/auth/logout",{method:"POST"})}finally{location.reload()}};
  loadTab("overview");
