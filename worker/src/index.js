@@ -5,8 +5,8 @@ const SESSION_SECONDS = 60 * 60 * 8;
 const ROLE_PERMISSIONS = {
   "Executives": ["*"], "Co-Executives": ["management"],
   "Operations Team": ["operations"], "Operations Lead": ["operations"], "Operations": ["operations"],
-  "Trial Operations": ["operations_limited"], "Sales Team": ["sales","orders:create"],
-  "Senior Sales Associate": ["sales","orders:create"], "Sales Associate": ["sales","orders:create"],
+  "Trial Operations": ["operations_limited"], "Sales Team": ["sales","orders:create","orders:view","customers:view"],
+  "Senior Sales Associate": ["sales","orders:create","orders:view","customers:view"], "Sales Associate": ["sales","orders:create","orders:view","customers:view"],
   "Support Team": ["support"], "Senior Support Agent": ["support"], "Support Agent": ["support"],
   "Trial Agent": ["support_limited"], "Creative Team": ["creative"],
   "Clothing Designer": ["orders:clothing"], "Livery Designer": ["orders:livery"],
