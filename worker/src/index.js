@@ -241,7 +241,7 @@ async function discordInteraction(request,env){
  const getOpt=(key)=>opts.find(o=>o.name===key)?.value;
  const user=i.member?.user||i.user,uid=user?.id;
  if(!uid)return reply("I couldn't identify your Discord account.");
- let access;try{access=await getAccess(uid,env)}catch{return reply("I couldn't verify your VANTA server access right now.")};
+ let access;try{access=await getAccess(uid,env)}catch(error){console.error("Discord interaction access check failed:",error?.message||String(error));return reply("I couldn't verify your VANTA server access right now.")};
  if(!access)return reply("You need to be a member of the VANTA Designs server to use this command.");
  const perms=access.permissions;
  if(name==="panel")return reply("**VANTA Central**\nManage your orders and account here: "+env.APP_URL);
