@@ -47,7 +47,7 @@ async function getVantaMember(userId,env){
 }
 function has(perms,p){return perms.includes("*")||perms.includes(p)}
 function canManageRoles(perms){return has(perms,"roles:manage")||has(perms,"management")}
-function canSeeCustomers(perms){return has(perms,"customers:view")||has(perms,"customers:manage")||canManageRoles(perms)}
+function canSeeCustomers(perms){return has(perms,"customers:view")||has(perms,"customers:manage")||has(perms,"orders:create")||canManageRoles(perms)}
 async function getSession(request,env){
  const raw=await verify(getCookie(request,SESSION_COOKIE),env.SESSION_SECRET);if(!raw)return null;
  try{const s=JSON.parse(raw);return s.exp>Date.now()/1000?s:null}catch{return null}
