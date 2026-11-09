@@ -345,6 +345,17 @@ async function handle(request,env){
   const rows=await env.DB.prepare("SELECT id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at FROM command_logs ORDER BY created_at DESC LIMIT ?").bind(limit).all();
   return json({logs:rows.results||[]},200);
  }
+ if(url.pathname==="/internal/member-check"&&request.method==="GET"){
+  const auth=request.headers.get("authorization")||"";
+  if(!env.DISCORD_CLIENT_SECRET||auth!==`Bearer ${env.DISCORD_CLIENT_SECRET}`)return json({error:"Unauthorized"},401);
+  const discordId=url.searchParams.get("discordId")||"";
+  if(!/^\\d{17,20}$/.test(discordId))return json({error:"Invalid Discord ID"},400);
+  const response=await discordFetch(`/guilds/${env.VANTA_GUILD_ID}/members/${discordId}`,`Bot ${env.DISCORD_BOT_TOKEN}`);
+  if(response.status===404)return json({member:false},200);
+  if(!response.ok)return json({error:"Discord membership check unavailable"},502);
+  const member=await response.json();
+  return json({member:true,discord_user_id:member.user.id,discord_username:member.user.username},200);
+ }
  if(url.pathname==="/internal/staff-directory"&&request.method==="GET"){
   const auth=request.headers.get("authorization")||"";
   if(!env.DISCORD_CLIENT_SECRET||auth!==`Bearer ${env.DISCORD_CLIENT_SECRET}`)return json({error:"Unauthorized"},401);
