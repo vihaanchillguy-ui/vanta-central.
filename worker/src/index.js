@@ -269,7 +269,7 @@ async function discordInteraction(request,env){
  let access;try{access=await getAccess(uid,env)}catch(error){console.error("Discord interaction access check failed:",error?.message||String(error));return reply("I couldn't verify your VANTA server access right now.")};
  if(!access)return reply("You need to be a member of the VANTA Designs server to use this command.");
  const perms=access.permissions;
- const isStaffCommandUser=has(perms,"*")||has(perms,"orders:update")||has(perms,"orders:assign")||has(perms,"management")||has(perms,"support:manage")||has(perms,"sales")||has(perms,"creative")||has(perms,"operations");
+ const isStaffCommandUser=has(perms,"*")||["orders:update","orders:assign","management","support:manage","support","support_limited","sales","creative","operations","operations_limited","orders:clothing","orders:livery","orders:graphics"].some(permission=>has(perms,permission));
  if(isStaffCommandUser){
   try{await env.DB.prepare("INSERT INTO command_logs(id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),uid,user.username||"",user.global_name||user.username||"",String(name||"unknown").slice(0,80),String(sub||"").slice(0,80),String(i.guild_id||env.VANTA_GUILD_ID),new Date().toISOString()).run()}catch(error){console.error("Discord command log write failed:",error?.message||String(error))}
  }
@@ -361,7 +361,7 @@ async function handle(request,env){
     const roleNames=(member.roles||[]).map(id=>roleMap.get(id)).filter(Boolean);
     const memberPermissions=new Set();
     for(const roleName of roleNames){if(!BLOCKED_ROLE_NAMES.has(roleName))for(const permission of ROLE_PERMISSIONS[roleName]||[])memberPermissions.add(permission)}
-    const isStaff=memberPermissions.has("*")||["management","operations","operations_limited","sales","support","support_limited","creative","orders:update","orders:assign"].some(permission=>memberPermissions.has(permission));
+    const isStaff=memberPermissions.has("*")||["management","operations","operations_limited","sales","support","support_limited","creative","orders:update","orders:assign","orders:clothing","orders:livery","orders:graphics"].some(permission=>memberPermissions.has(permission));
     if(isStaff)staff.push({discord_user_id:member.user.id,discord_username:member.user.username,display_name:member.user.global_name||member.user.username,role_names:roleNames});
    }
    if(batch.length<1000)break;
