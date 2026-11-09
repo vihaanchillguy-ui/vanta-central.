@@ -345,6 +345,31 @@ async function handle(request,env){
   const rows=await env.DB.prepare("SELECT id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at FROM command_logs ORDER BY created_at DESC LIMIT ?").bind(limit).all();
   return json({logs:rows.results||[]},200);
  }
+ if(url.pathname==="/internal/staff-directory"&&request.method==="GET"){
+  const auth=request.headers.get("authorization")||"";
+  if(!env.DISCORD_CLIENT_SECRET||auth!==`Bearer ${env.DISCORD_CLIENT_SECRET}`)return json({error:"Unauthorized"},401);
+  const roleResponse=await discordFetch(`/guilds/${env.VANTA_GUILD_ID}/roles`,`Bot ${env.DISCORD_BOT_TOKEN}`);
+  if(!roleResponse.ok)return json({error:"Discord role directory unavailable"},502);
+  const roles=await roleResponse.json(),roleMap=new Map(roles.map(role=>[role.id,role.name])),staff=[];
+  let after="";
+  for(let page=0;page<10;page++){
+   const suffix=after?`&after=${after}`:"";
+   const response=await discordFetch(`/guilds/${env.VANTA_GUILD_ID}/members?limit=1000${suffix}`,`Bot ${env.DISCORD_BOT_TOKEN}`);
+   if(!response.ok)return json({error:"Discord member directory unavailable"},502);
+   const batch=await response.json();
+   for(const member of batch){
+    const roleNames=(member.roles||[]).map(id=>roleMap.get(id)).filter(Boolean);
+    const memberPermissions=new Set();
+    for(const roleName of roleNames){if(!BLOCKED_ROLE_NAMES.has(roleName))for(const permission of ROLE_PERMISSIONS[roleName]||[])memberPermissions.add(permission)}
+    const isStaff=memberPermissions.has("*")||["management","operations","operations_limited","sales","support","support_limited","creative","orders:update","orders:assign"].some(permission=>memberPermissions.has(permission));
+    if(isStaff)staff.push({discord_user_id:member.user.id,discord_username:member.user.username,display_name:member.user.global_name||member.user.username,role_names:roleNames});
+   }
+   if(batch.length<1000)break;
+   after=batch[batch.length-1]?.user?.id||"";
+   if(!after)break;
+  }
+  return json({staff},200);
+ }
  if(url.pathname==="/auth/discord"&&request.method==="GET"){
   const state=b64url(crypto.getRandomValues(new Uint8Array(32))),mode=url.searchParams.get("mode")==="signup"?"signup":"login",redirect=new URL("https://discord.com/oauth2/authorize");
   redirect.searchParams.set("client_id",env.DISCORD_CLIENT_ID);redirect.searchParams.set("response_type","code");redirect.searchParams.set("redirect_uri",`${url.origin}/auth/callback`);redirect.searchParams.set("scope","identify");redirect.searchParams.set("state",state);
