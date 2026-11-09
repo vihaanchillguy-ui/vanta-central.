@@ -338,6 +338,13 @@ async function handle(request,env){
   const checks={discordClientId:!!env.DISCORD_CLIENT_ID,discordClientSecret:!!env.DISCORD_CLIENT_SECRET,discordBotToken:!!env.DISCORD_BOT_TOKEN,sessionSecret:!!env.SESSION_SECRET,databaseBinding:!!env.DB,ordersTable:tables};
   const ready=Object.values(checks).every(Boolean);return json({ok:ready,service:"Vanta Central",checks},ready?200:503);
  }
+ if(url.pathname==="/internal/command-logs"&&request.method==="GET"){
+  const auth=request.headers.get("authorization")||"";
+  if(!env.DISCORD_CLIENT_SECRET||auth!==`Bearer ${env.DISCORD_CLIENT_SECRET}`)return json({error:"Unauthorized"},401);
+  const limit=Math.min(100,Math.max(1,Number(url.searchParams.get("limit"))||100));
+  const rows=await env.DB.prepare("SELECT id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at FROM command_logs ORDER BY created_at DESC LIMIT ?").bind(limit).all();
+  return json({logs:rows.results||[]},200);
+ }
  if(url.pathname==="/auth/discord"&&request.method==="GET"){
   const state=b64url(crypto.getRandomValues(new Uint8Array(32))),mode=url.searchParams.get("mode")==="signup"?"signup":"login",redirect=new URL("https://discord.com/oauth2/authorize");
   redirect.searchParams.set("client_id",env.DISCORD_CLIENT_ID);redirect.searchParams.set("response_type","code");redirect.searchParams.set("redirect_uri",`${url.origin}/auth/callback`);redirect.searchParams.set("scope","identify");redirect.searchParams.set("state",state);
