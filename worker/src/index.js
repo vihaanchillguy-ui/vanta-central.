@@ -334,8 +334,8 @@ async function handle(request,env){
  if(url.pathname==="/discord/interactions"&&request.method==="POST")return discordInteraction(request,env);
  if(request.method==="OPTIONS"){if(!origin)return new Response(null,{status:403});return new Response(null,{status:204,headers:corsHeaders(origin)})}
  if(url.pathname==="/health"){
-  let tables=false;try{const r=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'").first();tables=Boolean(r)}catch{}
-  const checks={discordClientId:!!env.DISCORD_CLIENT_ID,discordClientSecret:!!env.DISCORD_CLIENT_SECRET,discordBotToken:!!env.DISCORD_BOT_TOKEN,sessionSecret:!!env.SESSION_SECRET,databaseBinding:!!env.DB,ordersTable:tables};
+  let tables=false,commandLogsTable=false;try{const r=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'").first();tables=Boolean(r);const c=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='command_logs'").first();commandLogsTable=Boolean(c)}catch{}
+  const checks={discordClientId:!!env.DISCORD_CLIENT_ID,discordClientSecret:!!env.DISCORD_CLIENT_SECRET,discordBotToken:!!env.DISCORD_BOT_TOKEN,sessionSecret:!!env.SESSION_SECRET,databaseBinding:!!env.DB,ordersTable:tables,commandLogsTable};
   const ready=Object.values(checks).every(Boolean);return json({ok:ready,service:"Vanta Central",checks},ready?200:503);
  }
  if(url.pathname==="/internal/command-logs"&&request.method==="GET"){
