@@ -69,9 +69,34 @@ async function handleApi(request,env,url,origin,session){
  if(path==="/api/me"&&method==="GET")return json({authenticated:true,user:{id:session.id,username:session.username,displayName:session.global_name,avatar:session.avatar},roles:access.discordRoles,discordRoles:access.discordRoles,vantaRoles:access.vantaRoles,permissions:perms},200,headers);
  if(path==="/api/staff"&&method==="GET"){
   if(!has(perms,"orders:assign"))return json({error:"You cannot assign orders"},403,headers);
-  const rows=await env.DB.prepare("SELECT discord_id,username,display_name FROM accounts ORDER BY display_name").all(),staff=[];
-  for(const member of rows.results||[]){try{const a=await getAccess(member.discord_id,env);if(a&&(has(a.permissions,"orders:update")||has(a.permissions,"orders:assign")))staff.push(member)}catch{}}
-  return json({staff},200,headers);
+  const roleResponse=await discordFetch(`/guilds/${env.VANTA_GUILD_ID}/roles`,`Bot ${env.DISCORD_BOT_TOKEN}`);
+  if(!roleResponse.ok)return json({error:"Discord role directory unavailable"},502,headers);
+  const roles=await roleResponse.json(),roleMap=new Map(roles.map(role=>[role.id,role.name])),members=[];
+  let after="";
+  for(let page=0;page<10;page++){
+   const suffix=after?`&after=${after}`:"";
+   const response=await discordFetch(`/guilds/${env.VANTA_GUILD_ID}/members?limit=1000${suffix}`,`Bot ${env.DISCORD_BOT_TOKEN}`);
+   if(!response.ok)return json({error:"Discord member directory unavailable"},502,headers);
+   const batch=await response.json();
+   for(const member of batch){
+    const roleNames=(member.roles||[]).map(id=>roleMap.get(id)).filter(Boolean);
+    const memberPermissions=new Set();
+    for(const roleName of roleNames){if(!BLOCKED_ROLE_NAMES.has(roleName))for(const permission of ROLE_PERMISSIONS[roleName]||[])memberPermissions.add(permission)}
+    if(memberPermissions.has("*")||memberPermissions.has("orders:update")||memberPermissions.has("orders:assign")||memberPermissions.has("creative")||memberPermissions.has("support")){
+     members.push({discord_id:member.user.id,username:member.user.username,display_name:member.user.global_name||member.user.username,role_names:roleNames});
+    }
+   }
+   if(batch.length<1000)break;
+   after=batch[batch.length-1]?.user?.id||"";
+   if(!after)break;
+  }
+  return json({staff:members},200,headers);
+ }
+ if(path==="/api/command-logs"&&method==="GET"){
+  if(!canManageRoles(perms))return json({error:"Management access required"},403,headers);
+  const limit=Math.min(100,Math.max(1,Number(url.searchParams.get("limit"))||50));
+  const rows=await env.DB.prepare("SELECT id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at FROM command_logs ORDER BY created_at DESC LIMIT ?").bind(limit).all();
+  return json({logs:rows.results||[]},200,headers);
  }
  if(path==="/api/orders"&&method==="GET"){
   if(!has(perms,"orders:view")&&!has(perms,"customer"))return json({error:"You cannot view orders"},403,headers);
@@ -244,6 +269,10 @@ async function discordInteraction(request,env){
  let access;try{access=await getAccess(uid,env)}catch(error){console.error("Discord interaction access check failed:",error?.message||String(error));return reply("I couldn't verify your VANTA server access right now.")};
  if(!access)return reply("You need to be a member of the VANTA Designs server to use this command.");
  const perms=access.permissions;
+ const isStaffCommandUser=has(perms,"*")||has(perms,"orders:update")||has(perms,"orders:assign")||has(perms,"management")||has(perms,"support:manage")||has(perms,"sales")||has(perms,"creative")||has(perms,"operations");
+ if(isStaffCommandUser){
+  try{await env.DB.prepare("INSERT INTO command_logs(id,discord_id,username,display_name,command_name,subcommand,guild_id,created_at) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),uid,user.username||"",user.global_name||user.username||"",String(name||"unknown").slice(0,80),String(sub||"").slice(0,80),String(i.guild_id||env.VANTA_GUILD_ID),new Date().toISOString()).run()}catch(error){console.error("Discord command log write failed:",error?.message||String(error))}
+ }
  if(name==="panel")return reply("**VANTA Central**\nManage your orders and account here: "+env.APP_URL);
  if(name==="order"){
   if(sub==="list"){
